@@ -1,9 +1,6 @@
 from discord.ext import commands
 import random
 
-user_points = 3
-cpu_points = 3
-
 double_ally_increase = 2
 double_betray_increase = 0
 betraying_ally_increase = 3
@@ -16,20 +13,21 @@ class AbGameCog(commands.Cog):
 
     @commands.command()
     async def abgame(self, ctx):
-        await ctx.send(welcome_message)
-
         async def rules():
             await ctx.send(rules_message)
 
         async def game():
 
-            global user_points, cpu_points
+            user_points = 3
+            cpu_points = 3
+
             cpu_choices = ["Ally", "Betray"]
 
-            while (0 < user_points < 9) and (0 < cpu_points < 9):
-                await ctx.send(game_start_message)
+            while (user_points < 9 and cpu_points < 9) and (user_points > 0 or cpu_points > 0):
+                await ctx.send(generate_game_start_message(user_points, cpu_points))
 
-                game_message = await self.bot.wait_for("message", check=lambda msg: msg.author == ctx.author, timeout=60.0)
+                game_message = await self.bot.wait_for("message", check=lambda msg: msg.author == ctx.author,
+                                                       timeout=60.0)
 
                 input_game_value = game_message.content
 
@@ -60,39 +58,61 @@ class AbGameCog(commands.Cog):
                 await ctx.send(f"```The opponent picked {cpu_pick}```")
 
             await ctx.send("```The game has finished.```")
-            if cpu_points > 9 and user_points > 9:
+
+            if cpu_points <= 0 and user_points <= 0:
+                await ctx.send(f"```You have both perished. Game Over.```")
+            elif cpu_points > 0 and user_points <= 0:
+                await ctx.send(f"```You have perished. Your opponent now able to win. Game Over.```")
+            elif cpu_points <= 0 and user_points < 0:
+                await ctx.send(f"```Your opponent has perished. You are now able to win. Congratulations.```")
+            elif cpu_points > 9 and user_points > 9:
                 await ctx.send(f"```You have both reached 9 BP, Congratulations! You are both free.```")
             elif cpu_points > user_points:
                 await ctx.send(f"```The opponent has reached 9 BP ({cpu_points} BP). Game Over.```")
             else:
-                await ctx.send(f"```You have reached {user_points}BP You now are 9 BP. Enjoy your freedom.```")
+                await ctx.send(f"```You have reached {user_points} BP, above 9 BP. Enjoy your freedom.```")
+            return
 
-        message = await self.bot.wait_for("message", check=lambda msg: msg.author == ctx.author, timeout=60.0)
+        await ctx.send(welcome_message)
+
+        def check(m):
+            return m.channel == ctx.channel and m.author == ctx.author
+
+        message = await self.bot.wait_for("message", check=check, timeout=60.0)
 
         input_value = message.content
         if input_value == "2":
             await game()
         elif input_value == "1":
             await rules()
+        elif input_value.startswith("l!"):
+            return
         else:
-            await ctx.send("```Invalid input, type l!abgame to try again.```")
+            await ctx.send("```Invalid input, Exiting Game.```")
+            return
 
 
 welcome_message = """
 ```Welcome to the AB game, what would you like to do? (Select 1 or 2, any other input will end the game)
 
 1. Read Rules
-2. Play Game```"""
+2. Play Game
+```"""
 
-game_start_message = f"""
-```You are now on {user_points} BP while the opponent is on {cpu_points} BP
-    
+
+def generate_game_start_message(u_points, c_points):
+    game_start_message = f"""
+    ```You are now on {u_points} BP while the opponent is on {c_points} BP
+        
 Please choose to either Ally or Betray.
-    
+        
 1. Ally
 2. Betray
-    
+        
 Failure to choose an option will automatically Ally.```"""
+
+    return game_start_message
+
 
 rules_message = f"""```
 Rules:
