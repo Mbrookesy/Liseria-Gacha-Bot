@@ -5,6 +5,7 @@ from discord.ext import commands
 import logging
 
 from commands.abgame import AbGameCog
+from commands.blackjack import BlackjackCog
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,5 +23,6 @@ async def on_ready():
 
 # Adding each Command
 bot.add_cog(AbGameCog(bot))
+bot.add_cog(BlackjackCog(bot))
 
 bot.run(TOKEN)
