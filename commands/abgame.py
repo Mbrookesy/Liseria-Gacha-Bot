@@ -1,4 +1,5 @@
 from discord.ext import commands
+from config.database_service import *
 import random
 
 double_ally_increase = 2
@@ -6,90 +7,94 @@ double_betray_increase = 0
 betraying_ally_increase = 3
 being_betrayed_decrease = -2
 
-
+#To Do - Make a better interface for this (Buttons?)
 class AbGameCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
     async def abgame(self, ctx):
-        async def rules():
-            await ctx.send(rules_message)
+        if await check_if_registered(ctx.author.id, ctx):
+            async def rules():
+                await ctx.send(rules_message)
 
-        async def game():
+            async def game():
 
-            user_points = 3
-            cpu_points = 3
+                user_points = 3
+                cpu_points = 3
 
-            cpu_choices = ["Ally", "Betray"]
+                cpu_choices = ["Ally", "Betray"]
 
-            while (user_points < 9 and cpu_points < 9) and (user_points > 0 or cpu_points > 0):
-                await ctx.send(generate_game_start_message(user_points, cpu_points))
+                while (user_points < 9 and cpu_points < 9) and (user_points > 0 or cpu_points > 0):
+                    await ctx.send(generate_game_start_message(user_points, cpu_points))
 
-                game_message = await self.bot.wait_for("message", check=lambda msg: msg.author == ctx.author,
-                                                       timeout=60.0)
+                    game_message = await self.bot.wait_for("message", check=lambda msg: msg.author == ctx.author,
+                                                           timeout=60.0)
 
-                input_game_value = game_message.content
+                    input_game_value = game_message.content
 
-                cpu_pick = random.choice(cpu_choices)
+                    cpu_pick = random.choice(cpu_choices)
 
-                if input_game_value == "2":
-                    await ctx.send("```You have chosen, Betray.```")
-                    player_pick = "Betray"
+                    if input_game_value == "2":
+                        await ctx.send("```You have chosen, Betray.```")
+                        player_pick = "Betray"
+                    else:
+                        await ctx.send("```You have chosen, Ally.```")
+                        player_pick = "Ally"
+
+                    await ctx.send("```Here are your results.```")
+
+                    if player_pick == "Ally" and cpu_pick == "Ally":
+                        user_points = user_points + double_ally_increase
+                        cpu_points = cpu_points + double_ally_increase
+                    elif player_pick == "Ally" and cpu_pick == "Betray":
+                        user_points = user_points + being_betrayed_decrease
+                        cpu_points = cpu_points + betraying_ally_increase
+                    elif player_pick == "Betray" and cpu_pick == "Ally":
+                        user_points = user_points + betraying_ally_increase
+                        cpu_points = cpu_points + being_betrayed_decrease
+                    else:
+                        user_points = user_points + double_betray_increase
+                        cpu_points = cpu_points + double_betray_increase
+
+                    await ctx.send(f"```The opponent picked {cpu_pick}```")
+
+                await ctx.send("```The game has finished.```")
+
+                if cpu_points <= 0 and user_points <= 0:
+                    await ctx.send(f"```You have both perished. Game Over. You gain 0 Gold.```")
+                elif cpu_points > 0 and user_points <= 0:
+                    await ctx.send(f"```You have perished. Your opponent is now able to win. Game Over. You gain 0 Gold.```")
+                elif cpu_points <= 0 and user_points < 0:
+                    await ctx.send(f"```Your opponent has perished. You are now able to win. Congratulations. You gain 100 Gold.```")
+                    await add_gold(ctx.author.id, 100, ctx)
+                elif cpu_points > 9 and user_points > 9:
+                    await ctx.send(f"```You have both reached 9 BP, Congratulations! You are both free. You gain 50 Gold.```")
+                    await add_gold(ctx.author.id, 50, ctx)
+                elif cpu_points > user_points:
+                    await ctx.send(f"```The opponent has reached 9 BP ({cpu_points} BP). Game Over. You gain 0 Gold.```")
                 else:
-                    await ctx.send("```You have chosen, Ally.```")
-                    player_pick = "Ally"
+                    await ctx.send(f"```You have reached {user_points} BP, above 9 BP. Enjoy your freedom. You gain 100 Gold.```")
+                    await add_gold(ctx.author.id, 100, ctx)
+                return
 
-                await ctx.send("```Here are your results.```")
+            await ctx.send(welcome_message)
 
-                if player_pick == "Ally" and cpu_pick == "Ally":
-                    user_points = user_points + double_ally_increase
-                    cpu_points = cpu_points + double_ally_increase
-                elif player_pick == "Ally" and cpu_pick == "Betray":
-                    user_points = user_points + being_betrayed_decrease
-                    cpu_points = cpu_points + betraying_ally_increase
-                elif player_pick == "Betray" and cpu_pick == "Ally":
-                    user_points = user_points + betraying_ally_increase
-                    cpu_points = cpu_points + being_betrayed_decrease
-                else:
-                    user_points = user_points + double_betray_increase
-                    cpu_points = cpu_points + double_betray_increase
+            def check(m):
+                return m.channel == ctx.channel and m.author == ctx.author
 
-                await ctx.send(f"```The opponent picked {cpu_pick}```")
+            message = await self.bot.wait_for("message", check=check, timeout=60.0)
 
-            await ctx.send("```The game has finished.```")
-
-            if cpu_points <= 0 and user_points <= 0:
-                await ctx.send(f"```You have both perished. Game Over.```")
-            elif cpu_points > 0 and user_points <= 0:
-                await ctx.send(f"```You have perished. Your opponent now able to win. Game Over.```")
-            elif cpu_points <= 0 and user_points < 0:
-                await ctx.send(f"```Your opponent has perished. You are now able to win. Congratulations.```")
-            elif cpu_points > 9 and user_points > 9:
-                await ctx.send(f"```You have both reached 9 BP, Congratulations! You are both free.```")
-            elif cpu_points > user_points:
-                await ctx.send(f"```The opponent has reached 9 BP ({cpu_points} BP). Game Over.```")
+            input_value = message.content
+            if input_value == "2":
+                await game()
+            elif input_value == "1":
+                await rules()
+            elif input_value.startswith("l!"):
+                return
             else:
-                await ctx.send(f"```You have reached {user_points} BP, above 9 BP. Enjoy your freedom.```")
-            return
-
-        await ctx.send(welcome_message)
-
-        def check(m):
-            return m.channel == ctx.channel and m.author == ctx.author
-
-        message = await self.bot.wait_for("message", check=check, timeout=60.0)
-
-        input_value = message.content
-        if input_value == "2":
-            await game()
-        elif input_value == "1":
-            await rules()
-        elif input_value.startswith("l!"):
-            return
-        else:
-            await ctx.send("```Invalid input, Exiting Game.```")
-            return
+                await ctx.send("```Invalid input, Exiting Game.```")
+                return
 
 
 welcome_message = """
