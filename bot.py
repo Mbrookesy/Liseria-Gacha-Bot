@@ -10,6 +10,7 @@ from commands.register import RegisterCog
 from commands.daily import DailyCog
 from commands.balance import BalanceCog
 from commands.help import HelpCog
+from commands.fish import FishCog
 
 from config.database_setup import database_setup
 
@@ -49,5 +50,6 @@ bot.add_cog(RegisterCog(bot))
 bot.add_cog(DailyCog(bot))
 bot.add_cog(BalanceCog(bot))
 bot.add_cog(HelpCog(bot))
+bot.add_cog(FishCog(bot))
 
 bot.run(TOKEN)
