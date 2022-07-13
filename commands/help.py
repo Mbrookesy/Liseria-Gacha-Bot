@@ -19,6 +19,7 @@ l!abgame - Starts an AB Game.
 l!balance - Shows the amount of gold in the user's wallet.
 l!blackjack - Starts a game of Blackjack.
 l!daily - Gives you an amount of gold per day (24 Hour Cooldown)
+l!fish - Catches a fish for you
 l!help - Provides a help section for the user.
 
 ```"""
